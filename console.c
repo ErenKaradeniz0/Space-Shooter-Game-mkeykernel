@@ -9,10 +9,10 @@
 #define BULLET_SPEED 1
 #define MAX_BULLETS 10000 // Maximum number of bullets
 
-#define ALIEN_SPEED 1
-#define MAX_Alien 15
+#define ROCKET_SPEED 1
+#define MAX_Rocket 5
 
-#define ALIEN_MOVE_DELAY 20 // Adjust this value to control alien movement speed
+#define ROCKET_MOVE_DELAY 20 // Adjust this value to control rocket movement speed
 
 typedef struct
 {
@@ -25,13 +25,13 @@ typedef struct
 {
     int x;
     int y;
-    int active; // Flag to indicate if the alien is active or not
-} Alien;
+    int active; // Flag to indicate if the rocket is active or not
+} Rocket;
 
 Bullet bullets[MAX_BULLETS]; // Array to hold multiple bullets
-Alien aliens[MAX_Alien];     // Array to hold multiple alien
+Rocket rockets[MAX_Rocket];     // Array to hold multiple rocket
 
-int alienMoveCounter = 0; // Counter to control alien movement speed
+int rocketMoveCounter = 0; // Counter to control rocket movement speed
 
 // Function to draw the boundaries
 void drawBoundaries()
@@ -66,8 +66,8 @@ void moveBullet(int index)
     mvprintw(bullets[index].y, bullets[index].x, "%c", BULLET); // Draw the bullet
 }
 
-// Function to draw the alien
-void drawAlien(int x, int y)
+// Function to draw the rocket
+void drawRocket(int x, int y)
 {
     mvprintw(y, x, "\\ || / ");
     mvprintw(y + 1, x, " |oo| ");
@@ -76,31 +76,31 @@ void drawAlien(int x, int y)
     mvprintw(y + 4, x, "  ");
 }
 
-// Function to move the alien
-void moveAlien(int index)
+// Function to move the rocket
+void moveRocket(int index)
 {
-    if (alienMoveCounter % ALIEN_MOVE_DELAY == 0)
-    {                                                      // Move the alien every ALIEN_MOVE_DELAY frames
-        mvprintw(aliens[index].y, aliens[index].x, "   "); // Clear previous alien position
-        aliens[index].y += ALIEN_SPEED;                    // Move the alien downwards
+    if (rocketMoveCounter % ROCKET_MOVE_DELAY == 0)
+    {                                                      // Move the rocket every ROCKET_MOVE_DELAY frames
+        mvprintw(rockets[index].y, rockets[index].x, "   "); // Clear previous rocket position
+        rockets[index].y += ROCKET_SPEED;                    // Move the rocket downwards
     }
 }
 
-// Function to check for collision between bullet and alien
+// Function to check for collision between bullet and rocket
 void checkCollision()
 {
     for (int i = 0; i < MAX_BULLETS; i++)
     {
         if (bullets[i].active)
         {
-            for (int j = 0; j < MAX_Alien; j++)
+            for (int j = 0; j < MAX_Rocket; j++)
             {
-                if (aliens[j].active &&
-                    bullets[i].x >= aliens[j].x && bullets[i].x < aliens[j].x + 7 &&
-                    bullets[i].y >= aliens[j].y && bullets[i].y < aliens[j].y + 5)
+                if (rockets[j].active &&
+                    bullets[i].x >= rockets[j].x && bullets[i].x < rockets[j].x + 7 &&
+                    bullets[i].y >= rockets[j].y && bullets[i].y < rockets[j].y + 5)
                 {
                     bullets[i].active = 0; // Deactivate bullet
-                    aliens[j].active = 0; // Deactivate alien
+                    rockets[j].active = 0; // Deactivate rocket
                     break;
                 }
             }
@@ -128,13 +128,13 @@ void main(void)
     // Print a message
     printw("Press arrow keys to move the spaceship. Press spacebar to fire bullets. Press q to quit.");
 
-    for (int i = 0; i < MAX_Alien; i++)
+    for (int i = 0; i < MAX_Rocket; i++)
     {
-        if (!aliens[i].active)
+        if (!rockets[i].active)
         {
-            aliens[i].x = rand() % (COLS - 5) + 1;
-            aliens[i].y = 1;
-            aliens[i].active = 1;
+            rockets[i].x = rand() % (COLS - 5) + 1;
+            rockets[i].y = 1;
+            rockets[i].active = 1;
         }
     }
 
@@ -192,25 +192,25 @@ void main(void)
             }
         }
 
-        // Draw and move the alien
-        for (int i = 0; i < MAX_Alien; i++)
+        // Draw and move the rocket
+        for (int i = 0; i < MAX_Rocket; i++)
         {
-            if (aliens[i].active)
+            if (rockets[i].active)
             {
-                drawAlien(aliens[i].x, aliens[i].y);
-                moveAlien(i);
+                drawRocket(rockets[i].x, rockets[i].y);
+                moveRocket(i);
             }
         }
 
-        // Check for collision between bullets and aliens
+        // Check for collision between bullets and rockets
         checkCollision();
 
-        // Increment the alien move counter
-        alienMoveCounter++;
+        // Increment the rocket move counter
+        rocketMoveCounter++;
 
         // Reset the counter to prevent overflow
-        if (alienMoveCounter >= ALIEN_MOVE_DELAY)
-            alienMoveCounter = 0;
+        if (rocketMoveCounter >= ROCKET_MOVE_DELAY)
+            rocketMoveCounter = 0;
 
         // Draw the spaceship
         drawSpaceship(x, y);
