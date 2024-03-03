@@ -2,6 +2,7 @@
     "files.associations": {
         "unistd.h": "c",
         "stdlib.h": "c",
-        "ncurses.h": "c"
+        "ncurses.h": "c",
+        "keyboard_map.h": "c"
     }
 }

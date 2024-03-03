@@ -18,6 +18,9 @@
 
 #define ENTER_KEY_CODE 0x1C
 
+#define SIDE_BAR_WIDTH 20
+#define ROCKET_WIDTH 6
+
 #define SPACE_SHIP_HEIGHT 4
 
 #define BULLET_SPEED 1
@@ -29,7 +32,7 @@
 
 #define TIMER_FREQUENCY 5000 // for sleep timer
 
-#define RAND_MAX 72 // rocket wing overflow
+#define RAND_MAX 80 // rocket wing overflow
 
 typedef struct
 {
@@ -245,6 +248,7 @@ void drawBoundaries()
     for (int i = 0; i < COLUMNS_IN_LINE; i++)
     {
         kprint_at(0, i, "#");
+        kprint_at(SIDE_BAR_WIDTH, i, "#");
         kprint_at(COLUMNS_IN_LINE - 1, i, "#");
     }
 
@@ -263,6 +267,7 @@ void intro()
     sleep(1000000);
     kprint_at(20, 13, "                                      ");
 }
+
 void drawSpaceship(int x, int y)
 {
     kprint_at(x, y, "   I   ");
@@ -321,22 +326,6 @@ void moveBullet(int index)
         bullets[index].active = 0;
 }
 
-// Define some global variables for the random number generator
-static unsigned long next;
-
-// Function to initialize the seed for the random number generator
-void srand(unsigned int seed)
-{
-    next = seed;
-}
-
-// A function to generate a pseudo-random integer
-int rand(void)
-{
-    next = next * 1103515245 + 12345;
-    return (unsigned int)(next / 65536) % RAND_MAX;
-}
-
 // Function to get the current value of the system timer
 unsigned int get_system_timer_value()
 {
@@ -345,8 +334,17 @@ unsigned int get_system_timer_value()
     __asm__ volatile("rdtsc" : "=a"(val));
     return val;
 }
-
+// Define some global variables for the random number generator
+static unsigned long next;
+// A function to generate a pseudo-random integer
+int rand(void)
+{
+    next = get_system_timer_value();
+    next = next * 1103515245 + 12345;
+    return (unsigned int)(next / 65536) % RAND_MAX;
+}
 // Function to busy-wait for a specified number of milliseconds
+
 void sleep(int milliseconds)
 {
     // Calculate the number of ticks needed based on the system timer frequency
@@ -359,6 +357,62 @@ void sleep(int milliseconds)
     while (get_system_timer_value() - start < ticks)
     {
         // Do nothing, just wait
+    }
+}
+
+void initBullets()
+{
+    for (int i = 0; i < MAX_BULLETS; i++)
+    {
+        bullets[i].x = 1;
+        bullets[i].y = 1;
+        bullets[i].active = 0;
+        bullets[i].avaible = 1;
+    }
+}
+
+int randRocketAxis()
+{
+    int min_x = SIDE_BAR_WIDTH + 1;
+    int max_x = COLUMNS_IN_LINE - ROCKET_WIDTH;
+    int x = rand();
+    while (min_x > x || x > max_x)
+    {
+        x = rand();
+    }
+    return x;
+}
+
+void initRockets()
+{
+    for (int i = 0; i < MAX_ROCKETS; i++)
+    {
+        int newRocketX, newRocketY;
+        int collisionDetected;
+
+        do
+        {
+            // Generate random position for the new rocket
+            newRocketX = randRocketAxis(); // Adjust range to prevent overflow
+            newRocketY = 1;                // Adjust range as needed
+
+            // Check for collision with existing rockets based on X position only
+            collisionDetected = 0;
+            for (int j = 0; j < i; j++)
+            {
+                if (rockets[j].active &&
+                    (newRocketX >= rockets[j].x - ROCKET_WIDTH && newRocketX <= rockets[j].x + ROCKET_WIDTH)) // Check only X position
+                {
+                    collisionDetected = 1;
+                    break;
+                }
+            }
+        } while (collisionDetected);
+
+        // Set the position of the new rocket
+        rockets[i].x = newRocketX;
+        rockets[i].y = newRocketY;
+        rockets[i].active = 1;
     }
 }
 
@@ -417,68 +471,28 @@ int continueGame()
 void kmain(void)
 {
     intro();
-    unsigned int seed = get_system_timer_value();
-
-    // Seed the random number generator
-    srand(seed);
 
     // Initialize the spaceship position
     int x = (COLUMNS_IN_LINE - 7) / 2;     // Starting position for spaceship
     int y = LINES - SPACE_SHIP_HEIGHT - 1; // Adjusted starting position for the spaceship
 
-    // initialize bullets
-    for (int i = 0; i < MAX_BULLETS; i++)
-    {
-        bullets[i].x = 1;
-        bullets[i].y = 1;
-        bullets[i].active = 0;
-        bullets[i].avaible = 1;
-    }
-
-    // initialize rockets
-    for (int i = 0; i < MAX_ROCKETS; i++)
-    {
-        int newRocketX, newRocketY;
-        int collisionDetected;
-
-        do
-        {
-            // Generate random position for the new rocket
-            newRocketX = rand() % (COLUMNS_IN_LINE - 7) + 1; // Adjust range as needed
-            newRocketY = 1;                                  // Adjust range as needed
-
-            // Check for collision with existing rockets
-            collisionDetected = 0;
-            for (int j = 0; j < i; j++)
-            {
-                if (rockets[j].active &&
-                    newRocketX >= rockets[j].x - 7 && newRocketX <= rockets[j].x + 7 &&
-                    newRocketY >= rockets[j].y - 5 && newRocketY <= rockets[j].y + 5)
-                {
-                    collisionDetected = 1;
-                    break;
-                }
-            }
-        } while (collisionDetected);
-
-        // Set the position of the new rocket
-        rockets[i].x = newRocketX;
-        rockets[i].y = newRocketY;
-        rockets[i].active = 1;
-    }
+    initBullets();
+    initRockets();
 
     idt_init();
     kb_init();
 
+    drawBoundaries();
     while (1)
     {
+
         if (flag)
         {
             clearSpaceship(x, y);
             switch (current_key)
             {
             case 'a':
-                if (x - 1 > 0)
+                if (x - 1 > SIDE_BAR_WIDTH)
                     x--;
                 break;
             case 'd':
@@ -504,7 +518,6 @@ void kmain(void)
             flag = 0;
         }
 
-        drawBoundaries();
         // kprint_at(test_x, y, "o");
 
         //  Draw the spaceship
@@ -538,7 +551,8 @@ void kmain(void)
         // Check for collision between bullets and rockets
         collisionBullet();
 
-        if(!continueGame()){
+        if (!continueGame())
+        {
             break;
         }
 
