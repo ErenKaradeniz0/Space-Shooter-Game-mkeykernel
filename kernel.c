@@ -3,7 +3,7 @@
  * License: GPL version 2 or higher http://www.gnu.org/licenses/gpl.html
  */
 #include "keyboard_map.h"
-// #include "clock.c"
+
 /* there are 25 lines each of 80 columns; each element takes 2 bytes */
 #define LINES 25
 #define COLUMNS_IN_LINE 80
@@ -28,7 +28,7 @@
 
 #define ROCKET_SPEED 1
 #define MAX_ROCKETS 3
-#define ROCKET_MOVE_DELAY 5 // Adjust this value to control rocket movement speed
+#define ROCKET_MOVE_DELAY 10 // Adjust this value to control rocket movement speed
 
 #define TIMER_FREQUENCY 5000 // for sleep timer
 
@@ -86,6 +86,17 @@ void idt_init(void)
     unsigned long idt_address;
     unsigned long idt_ptr[2];
 
+    // Cursor Control Registers for VGA text mode
+    unsigned char cursor_start_register = 0x0A;
+    unsigned char cursor_end_register = 0x0B;
+
+    // Write appropriate values to disable cursor blinking
+    write_port(0x3D4, cursor_start_register); // Select start register
+    write_port(0x3D5, 0x20); // Disable cursor blinking by setting bit 5
+
+    write_port(0x3D4, cursor_end_register); // Select end register
+    write_port(0x3D5, 0x00); // Setting end register to 0 disables cursor
+
     /* populate IDT entry of keyboard's interrupt */
     keyboard_address = (unsigned long)keyboard_handler;
     IDT[0x21].offset_lowerbits = keyboard_address & 0xffff;
@@ -133,21 +144,22 @@ void idt_init(void)
     load_idt(idt_ptr);
 }
 
+
 void kb_init(void)
 {
     /* 0xFD is 11111101 - enables only IRQ1 (keyboard)*/
     write_port(0x21, 0xFD);
 }
 
-void kprint(const char *str)
-{
-    unsigned int i = 0;
-    while (str[i] != '\0')
-    {
-        vidptr[current_loc++] = str[i++];
-        vidptr[current_loc++] = 0x07;
-    }
-}
+// void kprint(const char *str)
+// {
+//     unsigned int i = 0;
+//     while (str[i] != '\0')
+//     {
+//         vidptr[current_loc++] = str[i++];
+//         vidptr[current_loc++] = 0x07;
+//     }
+// }
 
 void kprint_at(int x, int y, const char *str)
 {
@@ -259,14 +271,113 @@ void drawBoundaries()
     }
 }
 
+// Function to convert an integer to its string representation
+int int_to_string(int num, char *buffer)
+{
+    int i = 0;
+    int digits = 0; // Variable to store the number of digits
+
+    if (num == 0)
+    {
+        buffer[i++] = '0';
+        digits = 1; // If the number is zero, it has one digit
+    }
+    else
+    {
+        // Calculate the number of digits
+        int temp = num;
+        while (temp != 0)
+        {
+            digits++;
+            temp /= 10;
+        }
+
+        // Convert each digit to character and store in the buffer
+        while (num != 0)
+        {
+            int digit = num % 10;
+            buffer[i++] = '0' + digit;
+            num /= 10;
+        }
+    }
+    buffer[i] = '\0';
+
+    // Reverse the string
+    int start = 0;
+    int end = i - 1;
+    while (start < end)
+    {
+        char temp = buffer[start];
+        buffer[start] = buffer[end];
+        buffer[end] = temp;
+        start++;
+        end--;
+    }
+
+    return digits; // Return the number of digits
+}
+
+void winGame(){
+        clear_screen();
+        drawBoundaries();
+        kprint_at(2, 1, "Save the World!");
+        kprint_at(2, 2, "Eren Karadeniz");
+        kprint_at(2, 4, "To play again");
+        kprint_at(2, 5, "Restart QEMU");
+        kprint_at(44, 12, "You Win");
+}
+
+int printRocketLeft(int x, int y)
+{
+    int rockets_to_destroy = 0;
+    for (int i = 0; i < MAX_ROCKETS; i++)
+    {
+        if (rockets[i].active)
+        {
+            rockets_to_destroy++;
+        }
+    }
+
+    if(!rockets_to_destroy){
+        winGame();
+        return 0;
+    }
+
+    char rockets_str[2]; // maximum number of digits is 2
+    int num_digits = int_to_string(rockets_to_destroy, rockets_str);
+    kprint_at(x, y, rockets_str);
+    return num_digits; // Return the number of digits printed
+}
+
 void intro()
 {
+    // Clear the screen and draw boundaries
     clear_screen();
     drawBoundaries();
-    kprint_at(20, 13, "welcome wasd to move x press q to quit");
+    
+    // Display the welcome message and instructions
+    kprint_at(2, 1, "Welcome!");
+    kprint_at(2, 2, "Save the World!");
+    kprint_at(2, 3, "by Eren Karadeniz");
+    kprint_at(2, 4, "200101070");
+
+    kprint_at(2, 6, "Keys");
+    kprint_at(2, 7, "A to move left");
+    kprint_at(2, 8, "D to move right");
+    kprint_at(2, 9, "Space to Shot");
+    kprint_at(2, 10, "Q to quit game");
     sleep(1000000);
-    kprint_at(20, 13, "                                      ");
+    kprint_at(2, 13, "x bullets left");
+    
+
+    // Print the string and the number of active rockets
+    kprint_at(2, 15, "Destroy");
+    printRocketLeft(10,15);
+    kprint_at(11, 15, " rockets");
 }
+
+// Function to convert an integer to its string representation
+
 
 void drawSpaceship(int x, int y)
 {
@@ -289,18 +400,18 @@ void clearSpaceship(int x, int y)
 void drawRocket(int x, int y)
 {
     kprint_at(x, y, "\\ || /");
-    kprint_at(x, y + 1, " |oo| ");
-    kprint_at(x, y + 2, " |oo| ");
-    kprint_at(x, y + 3, "  \\/ ");
+    kprint_at(x, y + 1, " |oo|");
+    kprint_at(x, y + 2, " |oo|");
+    kprint_at(x, y + 3, "  \\/");
 }
 
 // Function to draw the rocket
 void clearRocket(int x, int y)
 {
-    kprint_at(x, y, "       ");
-    kprint_at(x, y + 1, "      ");
-    kprint_at(x, y + 2, "      ");
-    kprint_at(x, y + 3, "      ");
+    kprint_at(x, y, "      ");
+    kprint_at(x, y + 1, "     ");
+    kprint_at(x, y + 2, "     ");
+    kprint_at(x, y + 3, "    ");
 }
 
 // Function to move the rocket
@@ -373,8 +484,8 @@ void initBullets()
 
 int randRocketAxis()
 {
-    int min_x = SIDE_BAR_WIDTH + 1;
-    int max_x = COLUMNS_IN_LINE - ROCKET_WIDTH;
+    int min_x = SIDE_BAR_WIDTH + 1;  //21
+    int max_x = COLUMNS_IN_LINE - ROCKET_WIDTH -1; // 73
     int x = rand();
     while (min_x > x || x > max_x)
     {
@@ -470,14 +581,16 @@ int continueGame()
 
 void kmain(void)
 {
+    initBullets();
+    initRockets();
     intro();
+    // Call function to disable cursor blinking
 
     // Initialize the spaceship position
     int x = (COLUMNS_IN_LINE - 7) / 2;     // Starting position for spaceship
     int y = LINES - SPACE_SHIP_HEIGHT - 1; // Adjusted starting position for the spaceship
 
-    initBullets();
-    initRockets();
+
 
     idt_init();
     kb_init();
@@ -550,7 +663,9 @@ void kmain(void)
 
         // Check for collision between bullets and rockets
         collisionBullet();
-
+        if(!printRocketLeft(10,15)){
+            break;
+        }
         if (!continueGame())
         {
             break;
@@ -561,7 +676,11 @@ void kmain(void)
         {
             clear_screen();
             drawBoundaries();
-            kprint_at(35, 12, "The End");
+            kprint_at(2, 1, "Save the World!");
+            kprint_at(2, 2, "Eren Karadeniz");
+            kprint_at(2, 4, "To play again");
+            kprint_at(2, 5, "Restart QEMU");
+            kprint_at(44, 12, "The End");
             break;
         }
     }
