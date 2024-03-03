@@ -3,7 +3,7 @@
 * License: GPL version 2 or higher http://www.gnu.org/licenses/gpl.html
 */
 #include "keyboard_map.h"
-// #include "clock.c"
+
 /* there are 25 lines each of 80 columns; each element takes 2 bytes */
 #define LINES 25
 #define COLUMNS_IN_LINE 80
@@ -18,20 +18,11 @@
 
 #define ENTER_KEY_CODE 0x1C
 
-
-int x = 1;
-int y = 1;
-int test_x=1;
-int flag = 0;
-char current_key = '1';
-
 extern unsigned char keyboard_map[128];
 extern void keyboard_handler(void);
 extern char read_port(unsigned short port);
 extern void write_port(unsigned short port, unsigned char data);
 extern void load_idt(unsigned long *idt_ptr);
-extern void sleep(int milliseconds);
-
 
 /* current cursor location */
 unsigned int current_loc = 0;
@@ -117,52 +108,6 @@ void kprint(const char *str)
 	}
 }
 
-
-void kprint_at(int x, int y, const char *str) {
-    // Check if coordinates are within valid range
-    if (x < 0 || x >= COLUMNS_IN_LINE || y < 0 || y >= LINES) {
-        return;  // Handle invalid coordinates (optional)
-    }
-
-    // Calculate absolute index in video memory buffer
-    int index = BYTES_FOR_EACH_ELEMENT * (y * COLUMNS_IN_LINE + x);
-
-    // Ensure pointer access is safe (adjust base address if needed)
-    char *ptr = (char *)0xb8000 + index;
-
-    while (*str != '\0') {
-        // Print character
-        *ptr++ = *str++;
-
-        // Print attribute byte (adjust if needed)
-        *ptr++ = 0x07; // Assuming white text on black background
-
-        // Handle potential wrapping at the end of a line
-        if (x == COLUMNS_IN_LINE - 1) {
-            // Move to the beginning of the next line
-            x = 0;
-            y++;
-
-            // Check if y is within valid range
-            if (y >= LINES) {
-                // Handle bottom of screen reached (optional)
-                break;
-            }
-
-            // Update index for the next line
-            index = BYTES_FOR_EACH_ELEMENT * (y * COLUMNS_IN_LINE + x);
-            ptr = (char *)0xb8000 + index;
-        } else {
-            // Increment x for next character within the same line
-            x++;
-        }
-    }
-
-    // Update global cursor position (optional)
-    // ... (implementation details based on your kernel's cursor logic)
-}
-
-
 void kprint_newline(void)
 {
 	unsigned int line_size = BYTES_FOR_EACH_ELEMENT * COLUMNS_IN_LINE;
@@ -192,82 +137,27 @@ void keyboard_handler_main(void)
 		keycode = read_port(KEYBOARD_DATA_PORT);
 		if(keycode < 0)
 			return;
-        current_key = (char) keyboard_map[(unsigned char) keycode];
-        flag = 1;
-		// if(keycode == ENTER_KEY_CODE) {
-		// 	kprint_newline();
-		// 	return;
-		// }
 
-		// vidptr[current_loc++] = keyboard_map[(unsigned char) keycode];
-		// vidptr[current_loc++] = 0x07;
+		if(keycode == ENTER_KEY_CODE) {
+			kprint_newline();
+			return;
+		}
+
+		vidptr[current_loc++] = keyboard_map[(unsigned char) keycode];
+		vidptr[current_loc++] = 0x07;
 	}
 }
 
-void drawBoundaries()
-{
-    for (int i = 0; i < COLUMNS_IN_LINE; i++)
-    {
-        kprint_at(0, i, "#");
-        kprint_at(COLUMNS_IN_LINE - 1, i, "#");
-    }
-
-    for (int i = 0; i < COLUMNS_IN_LINE; i++)
-    {
-        kprint_at(i, 0, "#");
-        kprint_at(i, LINES - 1, "#");
-    }
-}
-
-
 void kmain(void)
 {
-    int counter_A = 0;
-    clear_screen();
-    kprint_at(x, y, "welcome wasd to move x press q to quit");
-    idt_init();
+	const char *str = "my first kernel with keyboard support";
+	clear_screen();
+	kprint(str);
+	kprint_newline();
+	kprint_newline();
+
+	idt_init();
 	kb_init();
-    clear_screen();
-    drawBoundaries();
-    while(1){
-        if(counter_A % 10000000 == 0)
-        {
-                kprint_at(test_x, y, " ");
-                if(flag){
-                    kprint_at(x, y, " ");
-                    switch (current_key)
-                    {
-                        case 'w':
-                        y--;
-                        break;
-                        case 'a':
-                        x--;
-                        break;
-                        case 's':
-                        y++;
-                        break;
-                        case 'd':
-                        x++;
-                        break;
-                        case 'q':
-                        break;
-                    }
-                flag = 0;
-                }
-                test_x++;
-                drawBoundaries();
-                kprint_at(test_x, y, "o");
-                kprint_at(x, y, "X");
-                counter_A = 1;
-        }
-        counter_A++;
-        if(current_key == 'q'){
-        clear_screen();
-        kprint_at(x, y, "The End");
-        break;
-        }
-        
-    }
 
 	while(1);
 }
