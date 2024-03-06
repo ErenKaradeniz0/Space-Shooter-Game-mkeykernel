@@ -561,6 +561,17 @@ void gameOver()
     kprint_at(35, 12, "Game Over");
 }
 
+void quitGame()
+{
+    clear_screen();
+    drawBoundaries();
+    kprint_at(2, 1, "Save the World!");
+    kprint_at(2, 2, "Eren Karadeniz");
+    kprint_at(2, 4, "To play again");
+    kprint_at(2, 5, "Restart QEMU");
+    kprint_at(44, 12, "The End");
+}
+
 int continueGame()
 {
     // Check if all rockets have reached the bottom of the screen
@@ -588,16 +599,7 @@ int continueGame()
     return 1;
 }
 
-void quitGame()
-{
-    clear_screen();
-    drawBoundaries();
-    kprint_at(2, 1, "Save the World!");
-    kprint_at(2, 2, "Eren Karadeniz");
-    kprint_at(2, 4, "To play again");
-    kprint_at(2, 5, "Restart QEMU");
-    kprint_at(44, 12, "The End");
-}
+
 
 void shot_bullet(Bullet *bullet, int x, int y)
 {
@@ -631,8 +633,8 @@ void handleUserInput(char current_key, int *x, int y, Bullet bullets[MAX_BULLETS
             if (!bullets[i].active && bullets[i].avaible)
             {
                 shot_bullet(&bullets[i], *x, y);
-            }
                 break;
+            }
         }
         break;
     case 'q':
