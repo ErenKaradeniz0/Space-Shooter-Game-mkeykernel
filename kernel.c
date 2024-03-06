@@ -34,6 +34,9 @@
 
 #define RAND_MAX 80 // rocket wing overflow
 
+#define PRINT_ROCKETLEFT_X 10
+#define PRINT_ROCKETLEFT_Y 15
+
 typedef struct
 {
     int x;
@@ -382,7 +385,7 @@ void drawSpaceship(int x, int y)
 {
     kprint_at(x, y, "   I   ");
     kprint_at(x, y + 1, "  /-\\ ");
-    kprint_at(x, y + 2, " \\ U / ");
+    kprint_at(x, y + 2, " \\ U /");
     kprint_at(x, y + 3, "/o o o\\");
 }
 
@@ -441,9 +444,10 @@ unsigned int get_system_timer_value()
 {
     unsigned int val;
     // Read the value of the system timer (assuming x86 architecture)
-    __asm__ volatile("rdtsc" : "=a"(val));
+    asm volatile("rdtsc" : "=a"(val));
     return val;
 }
+
 // Define some global variables for the random number generator
 static unsigned long next;
 // A function to generate a pseudo-random integer
@@ -575,7 +579,98 @@ int continueGame()
         gameOver();
         return 0;
     }
+
+    if (current_key == 'q')
+    {
+        quitGame();
+        return 0;
+    }
     return 1;
+}
+
+void quitGame()
+{
+    clear_screen();
+    drawBoundaries();
+    kprint_at(2, 1, "Save the World!");
+    kprint_at(2, 2, "Eren Karadeniz");
+    kprint_at(2, 4, "To play again");
+    kprint_at(2, 5, "Restart QEMU");
+    kprint_at(44, 12, "The End");
+}
+
+void shot_bullet(Bullet *bullet, int x, int y)
+{
+    bullet->active = 1;
+    bullet->avaible = 0;
+    bullet->x = x + 3; // Adjust bullet position to appear from spaceship's center
+    bullet->y = y - 1;
+}
+
+void handleUserInput(char current_key, int *x, int y, Bullet bullets[MAX_BULLETS])
+{
+    switch (current_key)
+    {
+    case 'a':
+        if (*x - 1 > SIDE_BAR_WIDTH)
+        {
+            clearSpaceship(*x, y);
+            (*x)--;
+        }
+            break;
+    case 'd':
+        if (*x + 1 < COLUMNS_IN_LINE - 7)
+        {
+            clearSpaceship(*x, y);
+            (*x)++;
+        }
+            break;
+    case ' ':
+        for (int i = 0; i < MAX_BULLETS; i++)
+        {
+            if (!bullets[i].active && bullets[i].avaible)
+            {
+                shot_bullet(&bullets[i], *x, y);
+            }
+                break;
+        }
+        break;
+    case 'q':
+        break;
+    }
+    flag = 0;
+}
+
+void move_bullets()
+{
+    // Move all active bullets
+    for (int index = 0; index < MAX_BULLETS; index++)
+    {
+        if (bullets[index].active && !bullets[index].avaible)
+        {
+            kprint_at(bullets[index].x, bullets[index].y, "^");
+            moveBullet(index);
+        }
+    }
+}
+
+void move_rockets()
+{
+    // Draw and move the rocket
+    for (int i = 0; i < MAX_ROCKETS; i++)
+    {
+        if (rockets[i].active)
+        {
+            drawRocket(rockets[i].x, rockets[i].y);
+            moveRocket(i);
+        }
+    }
+
+    // Increment the rocket move counter
+    rocketMoveCounter++;
+    // Reset the counter to prevent overflow
+    if (rocketMoveCounter >= ROCKET_MOVE_DELAY)
+        rocketMoveCounter = 0;
 }
 
 void kmain(void)
@@ -583,84 +678,29 @@ void kmain(void)
     initBullets();
     initRockets();
     intro();
-    // Call function to disable cursor blinking
-
-    // Initialize the spaceship position
-    int x = (COLUMNS_IN_LINE - 7) / 2;     // Starting position for spaceship
-    int y = LINES - SPACE_SHIP_HEIGHT - 1; // Adjusted starting position for the spaceship
 
     idt_init();
     kb_init();
 
     drawBoundaries();
+    int x = (COLUMNS_IN_LINE - 7) / 2;     // Starting position for spaceship
+    int y = LINES - SPACE_SHIP_HEIGHT - 1; // Adjusted starting position for the spaceship
+
+    // game loop
     while (1)
     {
-
         if (flag)
         {
-            clearSpaceship(x, y);
-            switch (current_key)
-            {
-            case 'a':
-                if (x - 1 > SIDE_BAR_WIDTH)
-                    x--;
-                break;
-            case 'd':
-                if (x + 1 < COLUMNS_IN_LINE - 7)
-                    x++;
-                break;
-            case ' ':
-                for (int i = 0; i < MAX_BULLETS; i++)
-                {
-                    if (!bullets[i].active && bullets[i].avaible)
-                    {
-                        bullets[i].active = 1;
-                        bullets[i].avaible = 0;
-                        bullets[i].x = x + 3; // Adjust bullet position to appear from spaceship's center
-                        bullets[i].y = y - 1;
-                        break;
-                    }
-                }
-                break;
-            case 'q':
-                break;
-            }
-            flag = 0;
+            handleUserInput(current_key, &x, y, bullets);
         }
-
-        // kprint_at(test_x, y, "o");
-
-        //  Draw the spaceship
         drawSpaceship(x, y);
-
-        // Move all active bullets
-        for (int index = 0; index < MAX_BULLETS; index++)
-        {
-            if (bullets[index].active && !bullets[index].avaible)
-            {
-                kprint_at(bullets[index].x, bullets[index].y, "^");
-                moveBullet(index);
-            }
-        }
-        // Draw and move the rocket
-        for (int i = 0; i < MAX_ROCKETS; i++)
-        {
-            if (rockets[i].active)
-            {
-                drawRocket(rockets[i].x, rockets[i].y);
-                moveRocket(i);
-            }
-        }
-
-        // Increment the rocket move counter
-        rocketMoveCounter++;
-        // Reset the counter to prevent overflow
-        if (rocketMoveCounter >= ROCKET_MOVE_DELAY)
-            rocketMoveCounter = 0;
+        move_bullets();
+        move_rockets();
 
         // Check for collision between bullets and rockets
         collisionBullet();
-        if (!printRocketLeft(10, 15))
+
+        if (!printRocketLeft(PRINT_ROCKETLEFT_X, PRINT_ROCKETLEFT_Y))
         {
             break;
         }
@@ -668,19 +708,7 @@ void kmain(void)
         {
             break;
         }
-
         sleep(50000);
-        if (current_key == 'q')
-        {
-            clear_screen();
-            drawBoundaries();
-            kprint_at(2, 1, "Save the World!");
-            kprint_at(2, 2, "Eren Karadeniz");
-            kprint_at(2, 4, "To play again");
-            kprint_at(2, 5, "Restart QEMU");
-            kprint_at(44, 12, "The End");
-            break;
-        }
     }
 
     while (1)
