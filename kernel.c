@@ -474,6 +474,8 @@ void sleep(int milliseconds)
     }
 }
 
+
+
 void initBullets()
 {
     for (int i = 0; i < MAX_BULLETS; i++)
@@ -675,16 +677,19 @@ void move_rockets()
         rocketMoveCounter = 0;
 }
 
-void kmain(void)
-{
+void init(){
     initBullets();
     initRockets();
     intro();
-
     idt_init();
     kb_init();
-
     drawBoundaries();
+}
+
+void kmain(void)
+{
+    init();
+
     int x = (COLUMNS_IN_LINE - 7) / 2;     // Starting position for spaceship
     int y = LINES - SPACE_SHIP_HEIGHT - 1; // Adjusted starting position for the spaceship
 
