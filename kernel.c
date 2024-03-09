@@ -24,11 +24,11 @@
 #define SPACE_SHIP_HEIGHT 4
 
 #define BULLET_SPEED 1
-#define MAX_BULLETS 15 // Maximum number of bullets
+#define MAX_BULLETS 150 // Maximum number of bullets
 
 #define ROCKET_SPEED 1
-#define MAX_ROCKETS 6
-#define ROCKET_MOVE_DELAY 10 // Adjust this value to control rocket movement speed
+#define MAX_ROCKETS 5
+#define ROCKET_MOVE_DELAY 8 // Adjust this value to control rocket movement speed
 
 #define TIMER_FREQUENCY 5000 // for sleep timer
 
@@ -36,6 +36,8 @@
 
 #define PRINT_ROCKETLEFT_X 10
 #define PRINT_ROCKETLEFT_Y 15
+
+int quit_flag = 0;
 
 typedef struct
 {
@@ -71,6 +73,8 @@ extern void sleep(int milliseconds);
 unsigned int current_loc = 0;
 /* video memory begins at address 0xb8000 */
 char *vidptr = (char *)0xb8000;
+int x;
+int y;
 
 struct IDT_entry
 {
@@ -353,12 +357,7 @@ int printRocketLeft(int x, int y)
     return num_digits; // Return the number of digits printed
 }
 
-void intro()
-{
-    // Clear the screen and draw boundaries
-    clear_screen();
-    drawBoundaries();
-
+void info(){
     // Display the welcome message and instructions
     kprint_at(2, 1, "Welcome!");
     kprint_at(2, 2, "Save the World!");
@@ -370,7 +369,18 @@ void intro()
     kprint_at(2, 8, "D to move right");
     kprint_at(2, 9, "Space to Shot");
     kprint_at(2, 10, "Q to quit game");
-    sleep(1000000);
+    kprint_at(2, 11, "R to restart game");
+
+}
+
+void intro()
+{
+    // Clear the screen and draw boundaries
+    clear_screen();
+    drawBoundaries();
+
+    info();
+    // sleep(1000000);
     kprint_at(2, 13, "x bullets left");
 
     // Print the string and the number of active rockets
@@ -381,7 +391,7 @@ void intro()
 
 // Function to convert an integer to its string representation
 
-void drawSpaceship(int x, int y)
+void drawSpaceship()
 {
     kprint_at(x, y, "   I   ");
     kprint_at(x, y + 1, "  /-\\ ");
@@ -389,7 +399,7 @@ void drawSpaceship(int x, int y)
     kprint_at(x, y + 3, "/o o o\\");
 }
 
-void clearSpaceship(int x, int y)
+void clearSpaceship()
 {
     // Clear the old position of the spaceship
     kprint_at(x, y, "       ");
@@ -473,8 +483,6 @@ void sleep(int milliseconds)
         // Do nothing, just wait
     }
 }
-
-
 
 void initBullets()
 {
@@ -560,50 +568,19 @@ void gameOver()
 {
     clear_screen();
     drawBoundaries();
-    kprint_at(35, 12, "Game Over");
+    info();
+    kprint_at(35, 12, "You lost, Press R for Play Again");
 }
 
 void quitGame()
 {
     clear_screen();
     drawBoundaries();
-    kprint_at(2, 1, "Save the World!");
-    kprint_at(2, 2, "Eren Karadeniz");
-    kprint_at(2, 4, "To play again");
-    kprint_at(2, 5, "Restart QEMU");
-    kprint_at(44, 12, "The End");
+    info();
+    kprint_at(35, 12, "Press R for Play Again");
 }
 
-int continueGame()
-{
-    // Check if all rockets have reached the bottom of the screen
-    int rocketsReachedBottom = 0;
-    for (int i = 0; i < MAX_ROCKETS; i++)
-    {
-        if (rockets[i].y >= LINES)
-        {
-            rocketsReachedBottom = 1;
-            break;
-        }
-    }
-
-    if (rocketsReachedBottom)
-    {
-        gameOver();
-        return 0;
-    }
-
-    if (current_key == 'q')
-    {
-        quitGame();
-        return 0;
-    }
-    return 1;
-}
-
-
-
-void shot_bullet(Bullet *bullet, int x, int y)
+void shot_bullet(Bullet *bullet)
 {
     bullet->active = 1;
     bullet->avaible = 0;
@@ -611,35 +588,46 @@ void shot_bullet(Bullet *bullet, int x, int y)
     bullet->y = y - 1;
 }
 
-void handleUserInput(char current_key, int *x, int y, Bullet bullets[MAX_BULLETS])
+void restartGame()
+{
+    clear_screen(); // Clear the screen
+    init();         // Initialize the game
+}
+
+void handleUserInput(char current_key, Bullet bullets[MAX_BULLETS])
 {
     switch (current_key)
     {
     case 'a':
-        if (*x - 1 > SIDE_BAR_WIDTH)
+        if (x - 1 > SIDE_BAR_WIDTH)
         {
-            clearSpaceship(*x, y);
-            (*x)--;
+            clearSpaceship(x, y);
+            (x)--;
         }
-            break;
+        break;
     case 'd':
-        if (*x + 1 < COLUMNS_IN_LINE - 7)
+        if (x + 1 < COLUMNS_IN_LINE - 7)
         {
-            clearSpaceship(*x, y);
-            (*x)++;
+            clearSpaceship(x, y);
+            (x)++;
         }
-            break;
+        break;
     case ' ':
         for (int i = 0; i < MAX_BULLETS; i++)
         {
             if (!bullets[i].active && bullets[i].avaible)
             {
-                shot_bullet(&bullets[i], *x, y);
+                shot_bullet(&bullets[i]);
                 break;
             }
         }
         break;
     case 'q':
+        quitGame();
+        quit_flag = 1;
+        break;
+    case 'r':
+        restartGame(); // Restart the game
         break;
     }
     flag = 0;
@@ -654,6 +642,21 @@ void move_bullets()
         {
             kprint_at(bullets[index].x, bullets[index].y, "^");
             moveBullet(index);
+        }
+    }
+}
+
+void generate_rockets()
+{
+    // Generate new rockets if there are inactive rockets
+    for (int i = 0; i < MAX_ROCKETS; i++)
+    {
+        if (!rockets[i].active)
+        {
+            int newRocketX = randRocketAxis(); // Adjust range to prevent overflow
+            rockets[i].x = newRocketX;
+            rockets[i].y = 1; // Start from the top
+            rockets[i].active = 1;
         }
     }
 }
@@ -675,47 +678,77 @@ void move_rockets()
     // Reset the counter to prevent overflow
     if (rocketMoveCounter >= ROCKET_MOVE_DELAY)
         rocketMoveCounter = 0;
+    generate_rockets();
 }
 
-void init(){
+void init()
+{
     initBullets();
     initRockets();
     intro();
-    idt_init();
-    kb_init();
     drawBoundaries();
+
+    x = (COLUMNS_IN_LINE - 7) / 2;     // Starting position for spaceship
+    y = LINES - SPACE_SHIP_HEIGHT - 1; // Adjusted starting position for the spaceship
 }
 
+// Function to handle game restart
+
+
+int continueGame()
+{
+    // Check if all rockets have reached the bottom of the screen
+
+        int rocketsReachedBottom = 0;
+        for (int i = 0; i < MAX_ROCKETS; i++)
+        {
+            if (rockets[i].y >= LINES)
+            {
+                rocketsReachedBottom = 1;
+                if (rocketsReachedBottom)
+                {
+                    quit_flag = 1;
+                    gameOver();
+                    return 0;
+                }
+            }
+        }
+
+
+    return 1;
+}
 void kmain(void)
 {
+    idt_init();
+    kb_init();
     init();
-
-    int x = (COLUMNS_IN_LINE - 7) / 2;     // Starting position for spaceship
-    int y = LINES - SPACE_SHIP_HEIGHT - 1; // Adjusted starting position for the spaceship
 
     // game loop
     while (1)
     {
-        if (flag)
+        while (quit_flag == 0 && continueGame())
         {
-            handleUserInput(current_key, &x, y, bullets);
-        }
-        drawSpaceship(x, y);
-        move_bullets();
-        move_rockets();
+            if (flag)
+            {
+                handleUserInput(current_key, bullets);
+                if (current_key == 'q')
+                {
+                    break;
+                }
+            }
+            drawSpaceship(x, y);
+            move_bullets();
+            move_rockets();
 
-        // Check for collision between bullets and rockets
-        collisionBullet();
-
-        if (!printRocketLeft(PRINT_ROCKETLEFT_X, PRINT_ROCKETLEFT_Y))
-        {
-            break;
+            // Check for collision between bullets and rockets
+            collisionBullet();
+            sleep(50000);
         }
-        if (!continueGame())
+        if (current_key == 'r')
         {
-            break;
+            quit_flag = 0;
+            restartGame(); // Restart the game
         }
-        sleep(50000);
     }
 
     while (1)
