@@ -24,10 +24,10 @@
 #define SPACE_SHIP_HEIGHT 4
 
 #define BULLET_SPEED 1
-#define MAX_BULLETS 150 // Maximum number of bullets
+#define MAX_BULLETS 30
 
 #define ROCKET_SPEED 1
-#define MAX_ROCKETS 5
+#define MAX_ROCKETS 6
 #define ROCKET_MOVE_DELAY 8 // Adjust this value to control rocket movement speed
 
 #define TIMER_FREQUENCY 5000 // for sleep timer
@@ -61,7 +61,7 @@ int rocketMoveCounter = 0; // Counter to control rocket movement speed
 
 int flag = 0;
 char current_key = '1';
-
+int bullet_count = MAX_BULLETS;
 extern unsigned char keyboard_map[128];
 extern void keyboard_handler(void);
 extern char read_port(unsigned short port);
@@ -75,6 +75,9 @@ unsigned int current_loc = 0;
 char *vidptr = (char *)0xb8000;
 int x;
 int y;
+int score = 0;
+char score_str[3];   // maximum number of digits is 3
+char bullets_str[2]; // maximum number of digits is 3
 
 struct IDT_entry
 {
@@ -323,41 +326,34 @@ int int_to_string(int num, char *buffer)
     return digits; // Return the number of digits
 }
 
-void winGame()
+void printScore(int x, int y)
 {
-    clear_screen();
-    drawBoundaries();
-    kprint_at(2, 1, "Save the World!");
-    kprint_at(2, 2, "Eren Karadeniz");
-    kprint_at(2, 4, "To play again");
-    kprint_at(2, 5, "Restart QEMU");
-    kprint_at(44, 12, "You Win");
+    int num_digits = int_to_string(score, score_str);
+    kprint_at(x, y, score_str);
 }
 
-int printRocketLeft(int x, int y)
+void bullet_counter()
 {
-    int rockets_to_destroy = 0;
-    for (int i = 0; i < MAX_ROCKETS; i++)
+    bullet_count = 0;
+    for (int i = 0; i < MAX_BULLETS; i++)
     {
-        if (rockets[i].active)
+        if (bullets[i].avaible)
         {
-            rockets_to_destroy++;
+            bullet_count+=1;
         }
     }
+}
+void printBulletCount(int x, int y)
+{
 
-    if (!rockets_to_destroy)
-    {
-        winGame();
-        return 0;
-    }
-
-    char rockets_str[2]; // maximum number of digits is 2
-    int num_digits = int_to_string(rockets_to_destroy, rockets_str);
-    kprint_at(x, y, rockets_str);
-    return num_digits; // Return the number of digits printed
+    int num_digits = int_to_string(bullet_count, bullets_str);
+    kprint_at(x, y, bullets_str);
+    if(bullet_count<10)
+        kprint_at(x+1,y," ");
 }
 
-void info(){
+void info()
+{
     // Display the welcome message and instructions
     kprint_at(2, 1, "Welcome!");
     kprint_at(2, 2, "Save the World!");
@@ -370,7 +366,17 @@ void info(){
     kprint_at(2, 9, "Space to Shot");
     kprint_at(2, 10, "Q to quit game");
     kprint_at(2, 11, "R to restart game");
+    kprint_at(2, 12, "Win after reach");
+    kprint_at(2, 13, "25 Score");
+}
 
+void winGame()
+{
+    clear_screen();
+    drawBoundaries();
+    info();
+    kprint_at(44, 12, "You Win");
+    kprint_at(37, 13, "Press R for Play Again");
 }
 
 void intro()
@@ -380,13 +386,12 @@ void intro()
     drawBoundaries();
 
     info();
-    // sleep(1000000);
-    kprint_at(2, 13, "x bullets left");
 
-    // Print the string and the number of active rockets
-    kprint_at(2, 15, "Destroy");
-    printRocketLeft(10, 15);
-    kprint_at(11, 15, " rockets");
+    kprint_at(2, 17, "Bullets:");
+    printBulletCount(11, 17);
+
+    kprint_at(2, 18, "Score:");
+    printScore(10, 18);
 }
 
 // Function to convert an integer to its string representation
@@ -528,6 +533,7 @@ void initRockets()
                     (newRocketX >= rockets[j].x - ROCKET_WIDTH && newRocketX <= rockets[j].x + ROCKET_WIDTH)) // Check only X position
                 {
                     collisionDetected = 1;
+                    i = 0;
                     break;
                 }
             }
@@ -541,7 +547,7 @@ void initRockets()
 }
 
 // Function to check for collision between bullet and rocket
-void collisionBullet()
+int collisionBullet()
 {
     for (int i = 0; i < MAX_BULLETS; i++)
     {
@@ -553,6 +559,9 @@ void collisionBullet()
                     bullets[i].x >= rockets[j].x && bullets[i].x < rockets[j].x + 7 &&
                     bullets[i].y >= rockets[j].y && bullets[i].y < rockets[j].y + 5)
                 {
+                    score += 1;
+
+                    printScore(10, 18);
                     bullets[i].active = 0; // Deactivate bullet
                     rockets[j].active = 0; // Deactivate rocket
                     kprint_at(bullets[i].x, bullets[i].y, " ");
@@ -570,6 +579,8 @@ void gameOver()
     drawBoundaries();
     info();
     kprint_at(35, 12, "You lost, Press R for Play Again");
+    kprint_at(46, 13, "Score: ");
+    kprint_at(54, 13, score_str);
 }
 
 void quitGame()
@@ -586,6 +597,17 @@ void shot_bullet(Bullet *bullet)
     bullet->avaible = 0;
     bullet->x = x + 3; // Adjust bullet position to appear from spaceship's center
     bullet->y = y - 1;
+}
+
+void init()
+{
+    initBullets();
+    initRockets();
+    intro();
+    drawBoundaries();
+
+    x = (COLUMNS_IN_LINE - 7) / 2;     // Starting position for spaceship
+    y = LINES - SPACE_SHIP_HEIGHT - 1; // Adjusted starting position for the spaceship
 }
 
 void restartGame()
@@ -618,15 +640,22 @@ void handleUserInput(char current_key, Bullet bullets[MAX_BULLETS])
             if (!bullets[i].active && bullets[i].avaible)
             {
                 shot_bullet(&bullets[i]);
+                bullet_counter();
+                printBulletCount(11,17);
                 break;
             }
         }
         break;
     case 'q':
+        score = 0;
         quitGame();
+        bullet_count = MAX_BULLETS;
         quit_flag = 1;
         break;
     case 'r':
+        score = 0;
+        quit_flag = 0;
+        bullet_count = MAX_BULLETS;
         restartGame(); // Restart the game
         break;
     }
@@ -681,39 +710,34 @@ void move_rockets()
     generate_rockets();
 }
 
-void init()
-{
-    initBullets();
-    initRockets();
-    intro();
-    drawBoundaries();
-
-    x = (COLUMNS_IN_LINE - 7) / 2;     // Starting position for spaceship
-    y = LINES - SPACE_SHIP_HEIGHT - 1; // Adjusted starting position for the spaceship
-}
-
 // Function to handle game restart
-
 
 int continueGame()
 {
     // Check if all rockets have reached the bottom of the screen
 
-        int rocketsReachedBottom = 0;
-        for (int i = 0; i < MAX_ROCKETS; i++)
+    int rocketReachedBottom = 0;
+    for (int i = 0; i < MAX_ROCKETS; i++)
+    {
+        if (rockets[i].y >= LINES)
         {
-            if (rockets[i].y >= LINES)
+            rocketReachedBottom = 1;
+            if (rocketReachedBottom)
             {
-                rocketsReachedBottom = 1;
-                if (rocketsReachedBottom)
-                {
-                    quit_flag = 1;
-                    gameOver();
-                    return 0;
-                }
+                quit_flag = 1;
+                gameOver();
+                return 0;
             }
         }
+    }
 
+    if (score == 25)
+    {
+        quit_flag = 1;
+        winGame();
+        score = 0;
+        return 0;
+    }
 
     return 1;
 }
@@ -742,11 +766,13 @@ void kmain(void)
 
             // Check for collision between bullets and rockets
             collisionBullet();
+
             sleep(50000);
         }
         if (current_key == 'r')
         {
             quit_flag = 0;
+            bullet_count = MAX_BULLETS;
             restartGame(); // Restart the game
         }
     }
