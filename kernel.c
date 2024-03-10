@@ -19,16 +19,18 @@
 #define ENTER_KEY_CODE 0x1C
 
 #define SIDE_BAR_WIDTH 20
-#define ROCKET_WIDTH 6
+#define ROCKET_WIDTH 4
+#define ROCKET_HEIGHT 3
 
 #define SPACE_SHIP_HEIGHT 4
+#define SPACE_SHIP_WIDTH 6
 
 #define BULLET_SPEED 1
 #define MAX_BULLETS 30
 
 #define ROCKET_SPEED 1
-#define MAX_ROCKETS 6
-#define ROCKET_MOVE_DELAY 8 // Adjust this value to control rocket movement speed
+#define MAX_ROCKETS 3
+#define ROCKET_MOVE_DELAY 2 // Adjust this value to control rocket movement speed 8
 
 #define TIMER_FREQUENCY 5000 // for sleep timer
 
@@ -339,7 +341,7 @@ void bullet_counter()
     {
         if (bullets[i].avaible)
         {
-            bullet_count+=1;
+            bullet_count += 1;
         }
     }
 }
@@ -348,8 +350,8 @@ void printBulletCount(int x, int y)
 
     int num_digits = int_to_string(bullet_count, bullets_str);
     kprint_at(x, y, bullets_str);
-    if(bullet_count<10)
-        kprint_at(x+1,y," ");
+    if (bullet_count < 10)
+        kprint_at(x + 1, y, " ");
 }
 
 void info()
@@ -398,9 +400,9 @@ void intro()
 
 void drawSpaceship()
 {
-    kprint_at(x, y, "   I   ");
-    kprint_at(x, y + 1, "  /-\\ ");
-    kprint_at(x, y + 2, " \\ U /");
+    kprint_at(x, y, "A  I  A");
+    kprint_at(x, y + 1, "A /-\\ A");
+    kprint_at(x, y + 2, "\\  U  /");
     kprint_at(x, y + 3, "/o o o\\");
 }
 
@@ -416,19 +418,17 @@ void clearSpaceship()
 // Function to draw the rocket
 void drawRocket(int x, int y)
 {
-    kprint_at(x, y, "\\ || /");
-    kprint_at(x, y + 1, " |oo|");
-    kprint_at(x, y + 2, " |oo|");
-    kprint_at(x, y + 3, "  \\/");
+    kprint_at(x, y, "\\||/");
+    kprint_at(x, y + 1, "|oo|");
+    kprint_at(x, y + 2, " \\/");
 }
 
 // Function to draw the rocket
 void clearRocket(int x, int y)
 {
-    kprint_at(x, y, "      ");
-    kprint_at(x, y + 1, "     ");
-    kprint_at(x, y + 2, "     ");
-    kprint_at(x, y + 3, "    ");
+    kprint_at(x, y, "    ");
+    kprint_at(x, y + 1, "    ");
+    kprint_at(x, y + 2, "   ");
 }
 
 // Function to move the rocket
@@ -583,6 +583,23 @@ void gameOver()
     kprint_at(54, 13, score_str);
 }
 
+void collisionSpaceShip()
+{
+    for (int i = 0; i < MAX_ROCKETS; i++)
+    {
+        // Check if any of the edges of the rocket box lie outside the spaceship box
+
+        if (x <= rockets[i].x + ROCKET_WIDTH - 1
+        && x + SPACE_SHIP_WIDTH -1 >= rockets[i].x
+        && rockets[i].y + ROCKET_HEIGHT >= y)
+        {
+            quit_flag = 1;
+            gameOver();
+            kprint_at(36, 11, "Spaceship destroyed by rocket");
+        }
+    }
+}
+
 void quitGame()
 {
     clear_screen();
@@ -606,8 +623,8 @@ void init()
     intro();
     drawBoundaries();
 
-    x = (COLUMNS_IN_LINE - 7) / 2;     // Starting position for spaceship
-    y = LINES - SPACE_SHIP_HEIGHT - 1; // Adjusted starting position for the spaceship
+    x = (COLUMNS_IN_LINE - SPACE_SHIP_WIDTH) / 2; // Starting position for spaceship
+    y = LINES - SPACE_SHIP_HEIGHT - 1;            // Adjusted starting position for the spaceship
 }
 
 void restartGame()
@@ -641,7 +658,7 @@ void handleUserInput(char current_key, Bullet bullets[MAX_BULLETS])
             {
                 shot_bullet(&bullets[i]);
                 bullet_counter();
-                printBulletCount(11,17);
+                printBulletCount(11, 17);
                 break;
             }
         }
@@ -675,6 +692,37 @@ void move_bullets()
     }
 }
 
+// Function to generate a single rocket
+void generateRocket(Rocket *rocket)
+{
+    int newRocketX, newRocketY;
+    int collisionDetected;
+
+    do
+    {
+        // Generate random position for the new rocket
+        newRocketX = randRocketAxis(); // Adjust range to prevent overflow
+        newRocketY = 1;                // Adjust range as needed
+
+        // Check for collision with existing rockets based on X position only
+        collisionDetected = 0;
+        for (int j = 0; j < MAX_ROCKETS; j++)
+        {
+            if (rockets[j].active &&
+                (newRocketX >= rockets[j].x - ROCKET_WIDTH && newRocketX <= rockets[j].x + ROCKET_WIDTH)) // Check only X position
+            {
+                collisionDetected = 1;
+                break;
+            }
+        }
+    } while (collisionDetected);
+
+    // Set the position of the new rocket
+    rocket->x = newRocketX;
+    rocket->y = newRocketY;
+    rocket->active = 1;
+}
+
 void generate_rockets()
 {
     // Generate new rockets if there are inactive rockets
@@ -682,10 +730,7 @@ void generate_rockets()
     {
         if (!rockets[i].active)
         {
-            int newRocketX = randRocketAxis(); // Adjust range to prevent overflow
-            rockets[i].x = newRocketX;
-            rockets[i].y = 1; // Start from the top
-            rockets[i].active = 1;
+            generateRocket(&rockets[i]);
         }
     }
 }
@@ -766,6 +811,7 @@ void kmain(void)
 
             // Check for collision between bullets and rockets
             collisionBullet();
+            collisionSpaceShip();
 
             sleep(50000);
         }
