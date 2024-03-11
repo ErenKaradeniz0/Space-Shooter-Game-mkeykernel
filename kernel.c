@@ -475,7 +475,6 @@ int rand(void)
     next = next * 1103515245 + 12345;
     return (unsigned int)(next / 65536) % RAND_MAX;
 }
-// Function to busy-wait for a specified number of milliseconds
 
 // Define a function to wait for a specified number of milliseconds
 void busy_wait(unsigned int milliseconds)
