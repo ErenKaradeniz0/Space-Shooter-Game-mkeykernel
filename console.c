@@ -157,8 +157,9 @@ void info()
     mvprintw(9, 2, "Space to Shot");      // Swap parameters
     mvprintw(10, 2, "Q to quit game");    // Swap parameters
     mvprintw(11, 2, "R to restart game"); // Swap parameters
-    mvprintw(12, 2, "Win after reach");   // Swap parameters
-    mvprintw(13, 2, "25 Score");          // Swap parameters
+    mvprintw(12, 2, "P to pause game");
+    mvprintw(14, 2, "Win after reach"); // Swap parameters
+    mvprintw(15, 2, "25 Score");        // Swap parameters
 }
 
 void winGame()
@@ -393,14 +394,14 @@ void init()
     initRockets();
     intro();
 
-    x = (COLUMNS_IN_LINE - SPACE_SHIP_WIDTH) / 2; // Starting position for spaceship
-    y = LINES - SPACE_SHIP_HEIGHT - 1;            // Adjusted starting position for the spaceship
+    x = (COLUMNS_IN_LINE - SPACE_SHIP_WIDTH + SIDE_BAR_WIDTH) / 2; // Starting position for spaceship
+    y = LINES - SPACE_SHIP_HEIGHT - 2;                             // Adjusted starting position for the spaceship
 }
 
 void restartGame()
 {
-    clear(); // Clear the screen
-    init();  // Initialize the game
+
+    init(); // Initialize the game
 }
 
 void handleUserInput(char current_key, Bullet bullets[MAX_BULLETS])
@@ -452,14 +453,15 @@ void handleUserInput(char current_key, Bullet bullets[MAX_BULLETS])
             pause_flag = !pause_flag; // Toggle pause_flag
             if (pause_flag)
             {
-                mvprintw(10, 35, "Paused, Press any key to continue");
+                mvprintw(10, 35, "Paused, Press p to continue");
+                usleep(50000);
             }
             break;
         }
     }
     else
     {
-        if (current_key = 'p')
+        if (current_key == 'p')
         {
             pause_flag = 0;
             mvprintw(10, 35, "                                 ");
@@ -482,7 +484,7 @@ void move_bullets()
             }
         }
     }
-    // Increment the rocket move counter
+    // Increment the bullet move counter
     bulletMoveCounter++;
     // Reset the counter to prevent overflow
     if (bulletMoveCounter >= BULLET_MOVE_DELAY)
@@ -554,7 +556,7 @@ void move_rockets()
         rocketMoveCounter = 0;
 
     // Get keyboard input without waiting for Enter
-    int current_key = getch();
+    char current_key = getch();
     // Make getch a non-blocking call
     nodelay(stdscr, TRUE);
     if (current_key != 'p')
@@ -598,6 +600,8 @@ void main(void)
     // Initialize the curses library
     initscr();
 
+    resize_term(25, 80);
+
     // Don't display typed characters on the screen
     noecho();
 
@@ -618,12 +622,17 @@ void main(void)
     // game loop
     while (1)
     {
+        // Get keyboard input without waiting for Enter
+        char current_key = getch();
+        // Make getch a non-blocking call
+        nodelay(stdscr, TRUE);
         while (quit_flag == 0 && continueGame())
         {
             // Get keyboard input without waiting for Enter
-            int current_key = getch();
+            current_key = getch();
             // Make getch a non-blocking call
             nodelay(stdscr, TRUE);
+
             handleUserInput(current_key, bullets);
             if (current_key == 'q')
             {
@@ -640,9 +649,6 @@ void main(void)
             napms(10); // Introduce a small delay
         }
 
-        char current_key = getch();
-        // Make getch a non-blocking call
-        nodelay(stdscr, TRUE);
         if (current_key == 'r')
         {
             quit_flag = 0;

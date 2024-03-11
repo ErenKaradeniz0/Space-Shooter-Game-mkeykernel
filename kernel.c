@@ -30,7 +30,8 @@
 
 #define ROCKET_SPEED 1
 #define MAX_ROCKETS 4
-#define ROCKET_MOVE_DELAY 8
+#define ROCKET_MOVE_DELAY 14
+#define BULLET_MOVE_DELAY 2
 
 #define TIMER_FREQUENCY 5000 // for sleep timer
 
@@ -72,6 +73,7 @@ Bullet bullets[MAX_BULLETS];
 Rocket rockets[MAX_ROCKETS];
 
 int rocketMoveCounter = 0; // Counter to control rocket movement speed
+int bulletMoveCounter = 0; // Counter to control bullet movement speed
 
 int flag = 0; // flag 1 when key pressed
 int pause_flag = 0;
@@ -371,8 +373,9 @@ void info()
     kprint_at(2, 9, "Space to Shot");
     kprint_at(2, 10, "Q to quit game");
     kprint_at(2, 11, "R to restart game");
-    kprint_at(2, 12, "Win after reach");
-    kprint_at(2, 13, "25 Score");
+    kprint_at(2, 12, "P to pause game");
+    kprint_at(2, 14, "Win after reach");
+    kprint_at(2, 15, "25 Score");
 }
 
 void winGame()
@@ -442,14 +445,17 @@ void moveRocket(int index)
 
 void moveBullet(int index)
 {
-    kprint_at(bullets[index].x, bullets[index].y, " "); // Clear previous bullet position
-    bullets[index].y -= BULLET_SPEED;                   // Move the bullet upwards
-    if (bullets[index].y > 0)
+    if (bulletMoveCounter % BULLET_MOVE_DELAY == 0)
     {
-        kprint_at(bullets[index].x, bullets[index].y, "^"); // Draw the bullet
+        kprint_at(bullets[index].x, bullets[index].y, " "); // Clear previous bullet position
+        bullets[index].y -= BULLET_SPEED;                   // Move the bullet upwards
+        if (bullets[index].y > 0)
+        {
+            kprint_at(bullets[index].x, bullets[index].y, "^"); // Draw the bullet
+        }
+        else
+            bullets[index].active = 0;
     }
-    else
-        bullets[index].active = 0;
 }
 
 unsigned int get_system_timer_value()
@@ -471,16 +477,14 @@ int rand(void)
 }
 // Function to busy-wait for a specified number of milliseconds
 
-void sleep(int milliseconds)
+// Define a function to wait for a specified number of milliseconds
+void busy_wait(unsigned int milliseconds)
 {
-    // Calculate the number of ticks needed based on the system timer frequency
-    unsigned int ticks = milliseconds * TIMER_FREQUENCY;
+    // Calculate the number of iterations needed for the desired milliseconds
+    unsigned int iterations = milliseconds * 10000; // Adjust this value as needed based on your system's clock speed
 
-    // Get the current value of the system timer
-    unsigned int start = get_system_timer_value();
-
-    // Busy-wait until the required number of ticks has elapsed
-    while (get_system_timer_value() - start < ticks)
+    // Execute an empty loop for the specified number of iterations
+    for (unsigned int i = 0; i < iterations; ++i)
     {
         // Do nothing, just wait
     }
@@ -619,8 +623,8 @@ void init()
     intro();
     drawBoundaries();
 
-    x = (COLUMNS_IN_LINE - SPACE_SHIP_WIDTH) / 2; // Starting position for spaceship
-    y = LINES - SPACE_SHIP_HEIGHT - 1;            // Adjusted starting position for the spaceship
+    x = (COLUMNS_IN_LINE - SPACE_SHIP_WIDTH + SIDE_BAR_WIDTH) / 2; // Starting position for spaceship
+    y = LINES - SPACE_SHIP_HEIGHT - 1;                             // Adjusted starting position for the spaceship
 }
 
 void restartGame()
@@ -675,8 +679,9 @@ void handleUserInput(char current_key, Bullet bullets[MAX_BULLETS])
             break;
         case 'p':
             pause_flag = !pause_flag; // Toggle pause_flag
-            if(pause_flag){
-                kprint_at(35,10,"Paused, Press any key to continue");
+            if (pause_flag)
+            {
+                kprint_at(35, 10, "Paused, Press p to continue");
             }
             break;
         }
@@ -684,10 +689,10 @@ void handleUserInput(char current_key, Bullet bullets[MAX_BULLETS])
     }
     else
     {
-        if (current_key = 'p')
+        if (current_key == 'p')
         {
             pause_flag = 0;
-            kprint_at(35,10,"                                 ");
+            kprint_at(35, 10, "                                 ");
             flag = 0;
         }
     }
@@ -708,6 +713,11 @@ void move_bullets()
             }
         }
     }
+    // Increment the bullet move counter
+    bulletMoveCounter++;
+    // Reset the counter to prevent overflow
+    if (bulletMoveCounter >= BULLET_MOVE_DELAY)
+        bulletMoveCounter = 0;
 }
 
 // Function to generate a single rocket from passive rocket
@@ -835,7 +845,7 @@ void kmain(void)
             collisionBullet();
             collisionSpaceShip();
 
-            sleep(50000);
+            busy_wait(1000); // Wait for 50 milliseconds using busy wait
         }
 
         if (current_key == 'r')
