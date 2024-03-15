@@ -33,12 +33,7 @@
 #define ROCKET_MOVE_DELAY 14
 #define BULLET_MOVE_DELAY 2
 
-#define TIMER_FREQUENCY 5000 // for sleep timer
-
 #define RAND_MAX 80
-
-#define PRINT_ROCKETLEFT_X 10
-#define PRINT_ROCKETLEFT_Y 15
 
 extern unsigned char keyboard_map[128];
 extern void keyboard_handler(void);
