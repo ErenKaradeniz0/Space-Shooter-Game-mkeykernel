@@ -22,7 +22,7 @@
 #define ROCKET_WIDTH 4
 #define ROCKET_HEIGHT 3
 
-#define SPACE_SHIP_HEIGHT 4
+#define SPACE_SHIP_HEIGHT 3
 #define SPACE_SHIP_WIDTH 6
 
 #define BULLET_SPEED 1
@@ -401,8 +401,7 @@ void drawSpaceship()
 {
     kprint_at(x, y, "A  I  A");
     kprint_at(x, y + 1, "A /-\\ A");
-    kprint_at(x, y + 2, "\\  U  /");
-    kprint_at(x, y + 3, "/o o o\\");
+    kprint_at(x, y + 2, "/o o o\\");
 }
 
 void clearSpaceship()
@@ -411,7 +410,6 @@ void clearSpaceship()
     kprint_at(x, y, "       ");
     kprint_at(x, y + 1, "       ");
     kprint_at(x, y + 2, "       ");
-    kprint_at(x, y + 3, "       ");
 }
 
 void drawRocket(int x, int y)
@@ -585,7 +583,7 @@ void collisionSpaceShip()
     {
         // Check if any of the edges of the rocket box lie outside the spaceship box
 
-        if (x <= rockets[i].x + ROCKET_WIDTH - 1 && x + SPACE_SHIP_WIDTH - 1 >= rockets[i].x && rockets[i].y + ROCKET_HEIGHT >= y)
+        if (x <= rockets[i].x + ROCKET_WIDTH - 1 && x + SPACE_SHIP_WIDTH - 1 >= rockets[i].x && rockets[i].y + ROCKET_HEIGHT - 1 >= y)
         {
             quit_flag = 1;
             gameOver();
