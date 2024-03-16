@@ -267,7 +267,7 @@ void keyboard_handler_main(void)
 
 void drawBoundaries()
 {
-    for (int i = 0; i < COLUMNS_IN_LINE; i++)
+    for (int i = 0; i < LINES; i++)
     {
         kprint_at(0, i, "#");
         kprint_at(SIDE_BAR_WIDTH, i, "#");
