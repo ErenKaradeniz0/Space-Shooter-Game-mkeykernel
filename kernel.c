@@ -88,6 +88,7 @@ int ship_x;
 int ship_y;
 
 int score = 0;
+
 //string arrays for printing score and bullets count on screen
 char score_str[3];   // maximum number of digits is 3
 char bullets_str[2]; // maximum number of digits is 2
@@ -682,8 +683,8 @@ void init()
     intro();
     drawBoundaries();
 
-    ship_x = (MAX_X - SPACE_SHIP_WIDTH + SIDE_BAR_WIDTH) / 2; // Starting position for spaceship
-    ship_y = MAX_Y - SPACE_SHIP_HEIGHT - 1;                   // Adjusted starting position for the spaceship
+    ship_x = (MAX_X - SPACE_SHIP_WIDTH + SIDE_BAR_WIDTH) / 2; // X starting position for spaceship
+    ship_y = MAX_Y - SPACE_SHIP_HEIGHT - 1;                   // Y starting position for spaceship
 }
 
 //Quit game when pressed quit
