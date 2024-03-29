@@ -42,7 +42,6 @@ extern void keyboard_handler(void);
 extern char read_port(unsigned short port);
 extern void write_port(unsigned short port, unsigned char data);
 extern void load_idt(unsigned long *idt_ptr);
-extern void sleep(int milliseconds);
 
 /* current cursor location */
 unsigned int current_loc = 0;
@@ -194,7 +193,7 @@ void keyboard_handler_main(void)
 }
 
 //Print string to specific coordinates
-void kprint_at(int x, int y, const char *str)
+void kprintAt(int x, int y, const char *str)
 {
     // Check if coordinates are within valid range
     if (x < 0 || x >= MAX_X || y < 0 || y >= MAX_Y)
@@ -243,7 +242,7 @@ void kprint_at(int x, int y, const char *str)
 }
 
 //Clears all screen
-void clear_screen(void)
+void clearScreen(void)
 {
     unsigned int i = 0;
     while (i < SCREENSIZE)
@@ -258,20 +257,20 @@ void drawBoundaries()
 {
     for (int i = 0; i < MAX_Y; i++)
     {
-        kprint_at(0, i, "#");
-        kprint_at(SIDE_BAR_WIDTH, i, "#");
-        kprint_at(MAX_X - 1, i, "#");
+        kprintAt(0, i, "#");
+        kprintAt(SIDE_BAR_WIDTH, i, "#");
+        kprintAt(MAX_X - 1, i, "#");
     }
 
     for (int i = 0; i < MAX_X; i++)
     {
-        kprint_at(i, 0, "#");
-        kprint_at(i, MAX_Y - 1, "#");
+        kprintAt(i, 0, "#");
+        kprintAt(i, MAX_Y - 1, "#");
     }
 }
 
 // Convert an integer to its string representation
-int int_to_string(int num, char *buffer)
+int intToString(int num, char *buffer)
 {
     int i = 0;
     int digits = 0; // Variable to store the number of digits
@@ -319,12 +318,12 @@ int int_to_string(int num, char *buffer)
 //Print Score on Screen
 void printScore(int x, int y)
 {
-    int num_digits = int_to_string(score, score_str);
-    kprint_at(x, y, score_str);
+    int num_digits = intToString(score, score_str);
+    kprintAt(x, y, score_str);
 }
 
 //Count how many bullet left
-void bullet_counter()
+void bulletCounter()
 {
     bullet_count = 0;
     for (int i = 0; i < MAX_BULLETS; i++)
@@ -340,61 +339,61 @@ void bullet_counter()
 void printBulletCount(int x, int y)
 {
 
-    int num_digits = int_to_string(bullet_count, bullets_str);
-    kprint_at(x, y, bullets_str);
+    int num_digits = intToString(bullet_count, bullets_str);
+    kprintAt(x, y, bullets_str);
     if (bullet_count < 10)
-        kprint_at(x + 1, y, " ");
+        kprintAt(x + 1, y, " ");
 }
 
 //Write Game Info
 void info()
 {
     // Display the welcome message and instructions
-    kprint_at(2, 1, "Welcome!");
-    kprint_at(2, 2, "Save the World!");
-    kprint_at(2, 3, "by Eren Karadeniz");
-    kprint_at(2, 4, "200101070");
+    kprintAt(2, 1, "Welcome!");
+    kprintAt(2, 2, "Save the World!");
+    kprintAt(2, 3, "by Eren Karadeniz");
+    kprintAt(2, 4, "200101070");
 
-    kprint_at(2, 6, "Keys");
-    kprint_at(2, 7, "A to move left");
-    kprint_at(2, 8, "D to move right");
-    kprint_at(2, 9, "Space to Shot");
-    kprint_at(2, 10, "Q to quit game");
-    kprint_at(2, 11, "R to restart game");
-    kprint_at(2, 12, "P to pause game");
-    kprint_at(2, 14, "Win after reach");
-    kprint_at(2, 15, "25 Score");
+    kprintAt(2, 6, "Keys");
+    kprintAt(2, 7, "A to move left");
+    kprintAt(2, 8, "D to move right");
+    kprintAt(2, 9, "Space to Shot");
+    kprintAt(2, 10, "Q to quit game");
+    kprintAt(2, 11, "R to restart game");
+    kprintAt(2, 12, "P to pause game");
+    kprintAt(2, 14, "Win after reach");
+    kprintAt(2, 15, "25 Score");
 }
 
 // Initialize game screen
 void intro()
 {
-    clear_screen();
+    clearScreen();
     drawBoundaries();
 
     info();
 
-    kprint_at(2, 17, "Bullets:");
+    kprintAt(2, 17, "Bullets:");
     printBulletCount(11, 17);
 
-    kprint_at(2, 18, "Score:");
+    kprintAt(2, 18, "Score:");
     printScore(10, 18);
 }
 
 //Draws Spaceship
 void drawSpaceship()
 {
-    kprint_at(ship_x, ship_y, "A  I  A");
-    kprint_at(ship_x, ship_y + 1, "A /-\\ A");
-    kprint_at(ship_x, ship_y + 2, "/o o o\\");
+    kprintAt(ship_x, ship_y, "A  I  A");
+    kprintAt(ship_x, ship_y + 1, "A /-\\ A");
+    kprintAt(ship_x, ship_y + 2, "/o o o\\");
 }
 
 // Clears the old position of the spaceship
 void clearSpaceship()
 { 
-    kprint_at(ship_x, ship_y, "       ");
-    kprint_at(ship_x, ship_y + 1, "       ");
-    kprint_at(ship_x, ship_y + 2, "       ");
+    kprintAt(ship_x, ship_y, "       ");
+    kprintAt(ship_x, ship_y + 1, "       ");
+    kprintAt(ship_x, ship_y + 2, "       ");
 }
 
 //Move bullet
@@ -402,11 +401,11 @@ void moveBullet(int index)
 {
     if (bulletMoveCounter % BULLET_MOVE_DELAY == 0)
     {
-        kprint_at(bullets[index].x, bullets[index].y, " "); // Clear previous bullet position
+        kprintAt(bullets[index].x, bullets[index].y, " "); // Clear previous bullet position
         bullets[index].y -= BULLET_SPEED;                   // Move the bullet upwards
         if (bullets[index].y > 0)
         {
-            kprint_at(bullets[index].x, bullets[index].y, "^"); // Draw the bullet
+            kprintAt(bullets[index].x, bullets[index].y, "^"); // Draw the bullet
         }
         else
             bullets[index].active = 0;
@@ -414,7 +413,7 @@ void moveBullet(int index)
 }
 
 //Control movement of all bullets
-void move_bullets()
+void moveBullets()
 {
     // Move all active bullets
     for (int index = 0; index < MAX_BULLETS; index++)
@@ -423,7 +422,7 @@ void move_bullets()
         {
             if (bullets[index].active && !bullets[index].avaible)
             {
-                kprint_at(bullets[index].x, bullets[index].y, "^");
+                kprintAt(bullets[index].x, bullets[index].y, "^");
                 moveBullet(index);
             }
         }
@@ -436,7 +435,7 @@ void move_bullets()
 }
 
 //Initiliaze bullet
-void shot_bullet(Bullet *bullet)
+void shotBullet(Bullet *bullet)
 {
     bullet->active = 1;
     bullet->avaible = 0;
@@ -447,21 +446,21 @@ void shot_bullet(Bullet *bullet)
 //Draw Rocket
 void drawRocket(int x, int y)
 {
-    kprint_at(x, y, "\\||/");
-    kprint_at(x, y + 1, "|oo|");
-    kprint_at(x, y + 2, " \\/");
+    kprintAt(x, y, "\\||/");
+    kprintAt(x, y + 1, "|oo|");
+    kprintAt(x, y + 2, " \\/");
 }
 
 //ClearRocket
 void clearRocket(int x, int y)
 {
-    kprint_at(x, y, "    ");
-    kprint_at(x, y + 1, "    ");
-    kprint_at(x, y + 2, "   ");
+    kprintAt(x, y, "    ");
+    kprintAt(x, y + 1, "    ");
+    kprintAt(x, y + 2, "   ");
 }
 
 //Get System Timer for random
-unsigned int get_system_timer_value()
+unsigned int getSystemTimerValue()
 {
     unsigned int val;
     // Read the value of the system timer
@@ -475,7 +474,7 @@ static unsigned long next;
 //Generate a pseudo-random integer
 int rand(void)
 {
-    next = get_system_timer_value();
+    next = getSystemTimerValue();
     next = next * 1103515245 + 12345;
     return (unsigned int)(next / 65536) % RAND_MAX;
 }
@@ -525,7 +524,7 @@ void generateRocket(Rocket *rocket)
 }
 
 //Generate Rockets
-void generate_rockets()
+void generateRockets()
 {
     // Generate new rockets if there are inactive rockets
     for (int i = 0; i < MAX_ROCKETS; i++)
@@ -549,7 +548,7 @@ void moveRocket(int index)
 }
 
 //Control movement of single rocket
-void move_rockets()
+void moveRockets()
 {
     // Draw and move the rocket
     for (int i = 0; i < MAX_ROCKETS; i++)
@@ -571,7 +570,7 @@ void move_rockets()
         rocketMoveCounter = 0;
     if (current_key != 'p')
     {
-        generate_rockets();
+        generateRockets();
     }
 }
 
@@ -640,7 +639,7 @@ int collisionBullet()
                     printScore(10, 18);
                     bullets[i].active = 0; // Deactivate bullet
                     rockets[j].active = 0; // Deactivate rocket
-                    kprint_at(bullets[i].x, bullets[i].y, " ");
+                    kprintAt(bullets[i].x, bullets[i].y, " ");
                     clearRocket(rockets[j].x, rockets[j].y);
                     break;
                 }
@@ -652,12 +651,12 @@ int collisionBullet()
 //Game Over when player loses
 void gameOver()
 {
-    clear_screen();
+    clearScreen();
     drawBoundaries();
     info();
-    kprint_at(35, 12, "You lost, Press R for Play Again");
-    kprint_at(46, 13, "Score: ");
-    kprint_at(54, 13, score_str);
+    kprintAt(35, 12, "You lost, Press R for Play Again");
+    kprintAt(46, 13, "Score: ");
+    kprintAt(54, 13, score_str);
 }
 
 //Check for collision between rocket and spaceship
@@ -671,7 +670,7 @@ void collisionSpaceShip()
         {
             quit_flag = 1;
             gameOver();
-            kprint_at(36, 11, "Spaceship destroyed by rocket");
+            kprintAt(36, 11, "Spaceship destroyed by rocket");
         }
     }
 }
@@ -690,16 +689,16 @@ void init()
 //Quit game when pressed quit
 void quitGame()
 {
-    clear_screen();
+    clearScreen();
     drawBoundaries();
     info();
-    kprint_at(35, 12, "Press R for Play Again");
+    kprintAt(35, 12, "Press R for Play Again");
 }
 
 //Restart game when pressed restart
 void restartGame()
 {
-    clear_screen(); // Clear the screen
+    clearScreen(); // Clear the screen
     init();         // Initialize the game
 }
 
@@ -729,8 +728,8 @@ void handleUserInput(char current_key, Bullet bullets[MAX_BULLETS])
             {
                 if (!bullets[i].active && bullets[i].avaible)
                 {
-                    shot_bullet(&bullets[i]);
-                    bullet_counter();
+                    shotBullet(&bullets[i]);
+                    bulletCounter();
                     printBulletCount(11, 17);
                     break;
                 }
@@ -752,7 +751,7 @@ void handleUserInput(char current_key, Bullet bullets[MAX_BULLETS])
             pause_flag = !pause_flag; // Toggle pause_flag
             if (pause_flag)
             {
-                kprint_at(35, 10, "Paused, Press p to continue");
+                kprintAt(35, 10, "Paused, Press p to continue");
             }
             break;
         }
@@ -763,7 +762,7 @@ void handleUserInput(char current_key, Bullet bullets[MAX_BULLETS])
         if (current_key == 'p')
         {
             pause_flag = 0;
-            kprint_at(35, 10, "                                 ");
+            kprintAt(35, 10, "                                 ");
             flag = 0;
         }
     }
@@ -772,11 +771,11 @@ void handleUserInput(char current_key, Bullet bullets[MAX_BULLETS])
 //Win condition
 void winGame()
 {
-    clear_screen();
+    clearScreen();
     drawBoundaries();
     info();
-    kprint_at(44, 12, "You Win");
-    kprint_at(37, 13, "Press R for Play Again");
+    kprintAt(44, 12, "You Win");
+    kprintAt(37, 13, "Press R for Play Again");
 }
 
 //Continue Game unless win or lose or pause
@@ -810,8 +809,8 @@ int continueGame()
     return 1;
 }
 
-// Define a function to sleep
-void busy_wait(unsigned int milliseconds)
+// Define sleep
+void sleep(unsigned int milliseconds)
 {
     unsigned int iterations = milliseconds * 10000;
 
@@ -842,13 +841,13 @@ void kmain(void)
                 }
             }
             drawSpaceship(ship_x, ship_y);
-            move_bullets();
-            move_rockets();
+            moveBullets();
+            moveRockets();
             // Check for collision between bullets and rockets
             collisionBullet();
             collisionSpaceShip();
 
-            busy_wait(1000); // Wait for 50 milliseconds using busy wait
+            sleep(1000); // Wait for 50 milliseconds using busy wait
         }
 
         if (current_key == 'r')
